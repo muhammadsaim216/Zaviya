@@ -1,0 +1,6 @@
+{
+  "name": "Zaviya",
+  "description": "Exclusive neomorphic reservation and digital gastronomy experience for ZAVIYA restaurant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

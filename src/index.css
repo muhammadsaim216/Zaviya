@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Manrope:wght@200..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", serif;
+}
+
+body {
+  background-color: #131313;
+  color: #e5e2e1;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Custom Neomorphic Utilities */
+.neo-convex {
+  box-shadow: -6px -6px 12px #1f1f1f, 6px 6px 12px #0a0a0a;
+}
+
+.neo-concave {
+  box-shadow: inset -2px -2px 5px #1f1f1f, inset 2px 2px 5px #0a0a0a;
+}
+
+.neo-convex-sm {
+  box-shadow: -3px -3px 6px #1f1f1f, 3px 3px 6px #0a0a0a;
+}
+
+.neo-pressed {
+  box-shadow: inset -4px -4px 8px #1f1f1f, inset 4px 4px 8px #0a0a0a;
+}
+
+.neo-glint {
+  border: 1px solid rgba(242, 202, 80, 0.1);
+}
+
+.active-pill {
+  box-shadow: 0 0 10px rgba(242, 202, 80, 0.2);
+  border: 1px solid rgba(242, 202, 80, 0.4);
+}
+
+.active-tab {
+  box-shadow: inset -2px -2px 5px #1f1f1f, inset 2px 2px 5px #0a0a0a;
+  color: #f2ca50;
+}
+
+/* Hide default scrollbar but allow scrolling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #131313;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1f1f1f;
+  border-radius: 10px;
+}
+
+/* Custom input date resets for dark-mode styling */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) sepia(1) saturate(5) hue-rotate(3deg);
+  cursor: pointer;
+}
