@@ -42,6 +42,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
+import AuthForm from '../components/AuthForm';
 
 interface CabinetScreenProps {
   reservations: Reservation[];
@@ -134,16 +135,10 @@ export default function CabinetScreen({
           </p>
 
           {!currentUser ? (
-            <div className="space-y-4 pt-2">
-              <button
-                onClick={handleGoogleLogin}
-                className="w-full py-4 px-6 bg-[#f2ca50] text-[#131313] rounded-2xl font-sans text-xs font-bold tracking-widest uppercase hover:bg-white hover:text-black transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer neo-convex border-0"
-              >
-                <LogIn className="w-4 h-4" />
-                Staff Authenticate
-              </button>
-              <p className="font-sans text-[10px] text-[#bab8b7]/40">
-                Log in with your pre-authorized staff Google account.
+            <div className="pt-2 text-left">
+              <AuthForm adminMode={true} />
+              <p className="font-sans text-[10px] text-[#bab8b7]/40 text-center mt-4">
+                Please log in with your pre-authorized staff account to access.
               </p>
             </div>
           ) : (

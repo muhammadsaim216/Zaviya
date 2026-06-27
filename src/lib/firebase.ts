@@ -27,7 +27,10 @@ import {
   GoogleAuthProvider, 
   signOut, 
   onAuthStateChanged,
-  User 
+  User,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile
 } from 'firebase/auth';
 import { MenuItem, VenueSpace, Reservation, Order, ContactMessage, UserProfile, KitchenCabinetMember } from '../types';
 import { MENU_ITEMS, VENUE_SPACES } from '../data';
@@ -112,6 +115,27 @@ export async function signInWithGoogle(): Promise<User> {
     return result.user;
   } catch (error) {
     console.error('Google sign-in failed:', error);
+    throw error;
+  }
+}
+
+export async function signUpWithEmail(email: string, password: string, displayName: string): Promise<User> {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(result.user, { displayName });
+    return result.user;
+  } catch (error) {
+    console.error('Email sign-up failed:', error);
+    throw error;
+  }
+}
+
+export async function logInWithEmail(email: string, password: string): Promise<User> {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error) {
+    console.error('Email login failed:', error);
     throw error;
   }
 }

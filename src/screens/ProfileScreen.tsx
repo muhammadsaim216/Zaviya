@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile, Order, PageId } from '../types';
 import { signInWithGoogle, logOut, subscribeToSingleOrder } from '../lib/firebase';
 import { User } from 'firebase/auth';
+import AuthForm from '../components/AuthForm';
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -29,6 +30,14 @@ export default function ProfileScreen({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [authView, setAuthView] = useState<'guest' | 'auth'>('auth');
+
+  // Automatically switch to guest credentials view once authenticated
+  useEffect(() => {
+    if (currentUser) {
+      setAuthView('guest');
+    }
+  }, [currentUser]);
 
   // Sync formData with profile prop updates (e.g., when signing in loads profile from DB)
   useEffect(() => {
@@ -106,197 +115,215 @@ export default function ProfileScreen({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
         {/* Left Column: Edit Profile details (5 cols) */}
         <div className="lg:col-span-5 neo-convex p-8 md:p-10 rounded-[2.5rem] bg-[#20201f] border border-white/5 space-y-8">
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-[#f2ca50]" />
-            <h2 className="font-display text-2xl text-white font-bold">Account Settings</h2>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-[#f2ca50]" />
+              <h2 className="font-display text-2xl text-white font-bold">
+                {!currentUser && authView === 'auth' ? 'Authenticate' : 'Account Settings'}
+              </h2>
+            </div>
+            {!currentUser && (
+              <button
+                onClick={() => setAuthView(authView === 'auth' ? 'guest' : 'auth')}
+                className="text-[10px] font-sans font-bold uppercase tracking-wider text-[#f2ca50] hover:text-white underline underline-offset-4 cursor-pointer bg-transparent border-0"
+              >
+                {authView === 'auth' ? 'Guest Profile' : 'Sign In / Up'}
+              </button>
+            )}
           </div>
 
-          {/* Authentication Status Header */}
-          <div className="space-y-4">
-            {!currentUser ? (
-              <div className="p-5 rounded-2xl bg-[#ffb000]/5 border border-[#ffb000]/10 text-xs font-sans space-y-3">
-                <div className="flex justify-between items-center gap-3">
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-[#ffb000] uppercase tracking-wider block text-[9px]">Unauthenticated Guest</span>
-                    <p className="text-[#bab8b7]/60 leading-relaxed">Login to synchronize your credentials and past culinary orders across sessions.</p>
-                  </div>
-                  <button
-                    onClick={() => signInWithGoogle()}
-                    className="neo-convex bg-[#f2ca50] text-[#131313] hover:bg-[#d4af37] px-4 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
-                  >
-                    <LogIn className="w-3.5 h-3.5" />
-                    Connect
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-5 rounded-2xl bg-green-500/5 border border-green-500/10 text-xs font-sans space-y-3">
-                <div className="flex justify-between items-center gap-4">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    {currentUser.photoURL ? (
-                      <img src={currentUser.photoURL} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-green-500/20 shrink-0" alt="Avatar" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400 shrink-0">
-                        <UserIcon className="w-5 h-5" />
+          {!currentUser && authView === 'auth' ? (
+            <AuthForm onSuccess={() => setAuthView('guest')} />
+          ) : (
+            <>
+              {/* Authentication Status Header */}
+              <div className="space-y-4">
+                {!currentUser ? (
+                  <div className="p-5 rounded-2xl bg-[#ffb000]/5 border border-[#ffb000]/10 text-xs font-sans space-y-3">
+                    <div className="flex justify-between items-center gap-3">
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-[#ffb000] uppercase tracking-wider block text-[9px]">Unauthenticated Guest</span>
+                        <p className="text-[#bab8b7]/60 leading-relaxed">Login to synchronize your credentials and past culinary orders across sessions.</p>
                       </div>
-                    )}
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="font-bold text-green-400 uppercase tracking-wider block text-[9px]">Verified Member</span>
-                      <p className="text-white font-semibold truncate text-[11px]">{currentUser.displayName || currentUser.email}</p>
+                      <button
+                        onClick={() => setAuthView('auth')}
+                        className="neo-convex bg-[#f2ca50] text-[#131313] hover:bg-[#d4af37] px-4 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 cursor-pointer border-0"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        Connect
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => logOut()}
-                    className="neo-convex bg-red-500/10 border border-red-500/20 hover:border-red-500/30 text-red-400 hover:text-red-300 px-3 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                ) : (
+                  <div className="p-5 rounded-2xl bg-green-500/5 border border-green-500/10 text-xs font-sans space-y-3">
+                    <div className="flex justify-between items-center gap-4">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        {currentUser.photoURL ? (
+                          <img src={currentUser.photoURL} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-green-500/20 shrink-0" alt="Avatar" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400 shrink-0">
+                            <UserIcon className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div className="space-y-0.5 min-w-0">
+                          <span className="font-bold text-green-400 uppercase tracking-wider block text-[9px]">Verified Member</span>
+                          <p className="text-white font-semibold truncate text-[11px]">{currentUser.displayName || currentUser.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => logOut()}
+                        className="neo-convex bg-red-500/10 border border-red-500/20 hover:border-red-500/30 text-red-400 hover:text-red-300 px-3 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 cursor-pointer border-0"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <AnimatePresence>
+                {saveSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-sans flex items-center gap-3"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Sign Out
-                  </button>
+                    <CheckCircle2 className="w-5 h-5 shrink-0" />
+                    <span className="font-semibold">Your delivery credentials have been updated successfully!</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Full Name */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-[#f2ca50]" />
+                    Full Name
+                  </label>
+                  <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Sarmad Iqbal"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
 
-          <AnimatePresence>
-            {saveSuccess && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-sans flex items-center gap-3"
-              >
-                <CheckCircle2 className="w-5 h-5 shrink-0" />
-                <span className="font-semibold">Your delivery credentials have been updated successfully!</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Full Name */}
-            <div className="space-y-2.5">
-              <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
-                <UserIcon className="w-4 h-4 text-[#f2ca50]" />
-                Full Name
-              </label>
-              <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Sarmad Iqbal"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
-                />
-              </div>
-            </div>
-
-            {/* Email Address */}
-            <div className="space-y-2.5">
-              <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#f2ca50]" />
-                Email Address
-              </label>
-              <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
-                <input
-                  type="email"
-                  required
-                  placeholder="sarmad@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
-                />
-              </div>
-            </div>
-
-            {/* Phone Number */}
-            <div className="space-y-2.5">
-              <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
-                <Phone className="w-4 h-4 text-[#f2ca50]" />
-                Mobile Contact
-              </label>
-              <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
-                <input
-                  type="tel"
-                  required
-                  placeholder="+92 333 1234567"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Delivery Street Address */}
-            <div className="space-y-2.5">
-              <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#f2ca50]" />
-                Delivery Street Address
-              </label>
-              <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
-                <input
-                  type="text"
-                  required
-                  placeholder="House #, Street name, Block / Area..."
-                  value={formData.streetAddress}
-                  onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
-                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
-                />
-              </div>
-            </div>
-
-            {/* Apartment/Suite/Floor */}
-            <div className="space-y-2.5">
-              <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider">
-                Apartment / Suite / Floor <span className="text-[#bab8b7]/40 font-normal lowercase">(optional)</span>
-              </label>
-              <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
-                <input
-                  type="text"
-                  placeholder="Apartment B4, 3rd Floor..."
-                  value={formData.apartmentSuite || ''}
-                  onChange={(e) => setFormData({ ...formData, apartmentSuite: e.target.value })}
-                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
-                />
-              </div>
-            </div>
-
-            {/* City & Zip Code */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2.5">
-                <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider">City</label>
-                <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Islamabad"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
-                  />
+                {/* Email Address */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-[#f2ca50]" />
+                    Email Address
+                  </label>
+                  <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
+                    <input
+                      type="email"
+                      required
+                      placeholder="sarmad@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2.5">
-                <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider">Postal Code</label>
-                <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
-                  <input
-                    type="text"
-                    placeholder="44000"
-                    value={formData.postalCode || ''}
-                    onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                    className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-mono"
-                  />
-                </div>
-              </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="neo-convex w-full bg-[#f2ca50] hover:bg-[#d4af37] text-[#131313] py-4 rounded-xl font-sans font-bold text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-2"
-            >
-              {isSaving ? <span>Saving Credentials...</span> : <span>Save Address Details</span>}
-            </button>
-          </form>
+                {/* Phone Number */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-[#f2ca50]" />
+                    Mobile Contact
+                  </label>
+                  <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
+                    <input
+                      type="text"
+                      required
+                      placeholder="+92 333 1234567"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Delivery Street Address */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#f2ca50]" />
+                    Delivery Street Address
+                  </label>
+                  <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
+                    <input
+                      type="text"
+                      required
+                      placeholder="House #, Street name, Block / Area..."
+                      value={formData.streetAddress}
+                      onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+                      className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
+                    />
+                  </div>
+                </div>
+
+                {/* Apartment/Suite/Floor */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider">
+                    Apartment / Suite / Floor <span className="text-[#bab8b7]/40 font-normal lowercase">(optional)</span>
+                  </label>
+                  <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
+                    <input
+                      type="text"
+                      placeholder="Apartment B4, 3rd Floor..."
+                      value={formData.apartmentSuite || ''}
+                      onChange={(e) => setFormData({ ...formData, apartmentSuite: e.target.value })}
+                      className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
+                    />
+                  </div>
+                </div>
+
+                {/* City & Zip Code */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider">City</label>
+                    <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Islamabad"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-sans"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-sans font-semibold text-[#bab8b7] uppercase tracking-wider">Postal Code</label>
+                    <div className="neo-concave rounded-xl px-4 py-3 bg-[#131313] border border-white/5">
+                      <input
+                        type="text"
+                        placeholder="44000"
+                        value={formData.postalCode || ''}
+                        onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                        className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white font-semibold tracking-wide w-full font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="neo-convex w-full bg-[#f2ca50] hover:bg-[#d4af37] text-[#131313] py-4 rounded-xl font-sans font-bold text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer border-0"
+                >
+                  {isSaving ? <span>Saving Credentials...</span> : <span>Save Address Details</span>}
+                </button>
+              </form>
+            </>
+          )}
         </div>
 
         {/* Right Column: Order History and Tracking Details (7 cols) */}
