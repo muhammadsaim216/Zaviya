@@ -206,6 +206,18 @@ export default function App() {
     localStorage.setItem('zaviya_user_profile', JSON.stringify(userProfile));
   }, [userProfile]);
 
+  const isCabinet = !!(currentUser && (
+    currentUser.email === 'howsaim216@gmail.com' ||
+    cabinetMembers.some(m => m.uid === currentUser.uid || m.email === currentUser.email)
+  ));
+
+  // Access control guard: redirect to home if a non-admin tries to access the cabinet
+  useEffect(() => {
+    if (activePage === 'cabinet' && !isCabinet) {
+      setActivePage('home');
+    }
+  }, [activePage, isCabinet]);
+
   // Synchronize public Firestore collections
   useEffect(() => {
     let active = true;
@@ -655,6 +667,7 @@ export default function App() {
           onPageChange={setActivePage}
           cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
           onCartOpen={() => setIsCartOpen(true)}
+          isAdmin={isCabinet}
         />
 
         {/* Dynamic Route Screen Frame */}
@@ -674,7 +687,7 @@ export default function App() {
       </div>
 
       {/* Global Luxury Footer */}
-      <Footer onPageChange={setActivePage} />
+      <Footer onPageChange={setActivePage} isAdmin={isCabinet} />
 
       {/* Culinary Shopping Drawer */}
       <CartDrawer

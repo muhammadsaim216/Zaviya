@@ -13,9 +13,10 @@ interface HeaderProps {
   onPageChange: (page: PageId) => void;
   cartCount?: number;
   onCartOpen?: () => void;
+  isAdmin?: boolean;
 }
 
-export default function Header({ activePage, onPageChange, cartCount = 0, onCartOpen }: HeaderProps) {
+export default function Header({ activePage, onPageChange, cartCount = 0, onCartOpen, isAdmin = false }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -88,15 +89,17 @@ export default function Header({ activePage, onPageChange, cartCount = 0, onCart
         >
           Contact
         </button>
-        <button
-          className={`font-sans font-semibold tracking-widest text-xs uppercase transition-colors duration-300 flex items-center gap-1.5 ${
-            activePage === 'cabinet' ? 'text-[#f2ca50] border-b border-[#f2ca50]/40 pb-1' : 'text-[#d0c5af] hover:text-[#f2ca50]'
-          }`}
-          onClick={() => onPageChange('cabinet')}
-        >
-          <Shield className="w-3 h-3 text-[#f2ca50]" />
-          Kitchen Cabinet
-        </button>
+        {isAdmin && (
+          <button
+            className={`font-sans font-semibold tracking-widest text-xs uppercase transition-colors duration-300 flex items-center gap-1.5 ${
+              activePage === 'cabinet' ? 'text-[#f2ca50] border-b border-[#f2ca50]/40 pb-1' : 'text-[#d0c5af] hover:text-[#f2ca50]'
+            }`}
+            onClick={() => onPageChange('cabinet')}
+          >
+            <Shield className="w-3 h-3 text-[#f2ca50]" />
+            Kitchen Cabinet
+          </button>
+        )}
         <button
           className={`font-sans font-semibold tracking-widest text-xs uppercase transition-colors duration-300 flex items-center gap-1.5 ${
             activePage === 'profile' ? 'text-[#f2ca50] border-b border-[#f2ca50]/40 pb-1' : 'text-[#d0c5af] hover:text-[#f2ca50]'
@@ -200,15 +203,17 @@ export default function Header({ activePage, onPageChange, cartCount = 0, onCart
                 <User className="w-4 h-4 text-[#f2ca50]" />
                 Customer Profile
               </button>
-              <button
-                className={`font-sans font-bold tracking-[0.2em] text-sm uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  activePage === 'cabinet' ? 'neo-pressed text-[#f2ca50] active-pill' : 'text-[#d0c5af] hover:text-[#f2ca50]'
-                }`}
-                onClick={() => handleMobileNav('cabinet')}
-              >
-                <Shield className="w-4 h-4 text-[#f2ca50]" />
-                Kitchen Cabinet
-              </button>
+              {isAdmin && (
+                <button
+                  className={`font-sans font-bold tracking-[0.2em] text-sm uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
+                    activePage === 'cabinet' ? 'neo-pressed text-[#f2ca50] active-pill' : 'text-[#d0c5af] hover:text-[#f2ca50]'
+                  }`}
+                  onClick={() => handleMobileNav('cabinet')}
+                >
+                  <Shield className="w-4 h-4 text-[#f2ca50]" />
+                  Kitchen Cabinet
+                </button>
+              )}
             </div>
           </motion.div>
         )}

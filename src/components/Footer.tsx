@@ -9,9 +9,10 @@ import { Globe, Share2, Camera, Send } from 'lucide-react';
 
 interface FooterProps {
   onPageChange: (page: PageId) => void;
+  isAdmin?: boolean;
 }
 
-export default function Footer({ onPageChange }: FooterProps) {
+export default function Footer({ onPageChange, isAdmin = false }: FooterProps) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -70,12 +71,14 @@ export default function Footer({ onPageChange }: FooterProps) {
               >
                 Contact Us
               </button>
-              <button
-                onClick={() => onPageChange('cabinet')}
-                className="text-left text-[#bab8b7] hover:text-[#f2ca50] text-sm transition-colors duration-200"
-              >
-                Staff Portal
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => onPageChange('cabinet')}
+                  className="text-left text-[#bab8b7] hover:text-[#f2ca50] text-sm transition-colors duration-200"
+                >
+                  Staff Portal
+                </button>
+              )}
             </nav>
           </div>
           <div className="space-y-4">
