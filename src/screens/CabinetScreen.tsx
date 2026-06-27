@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { MenuItem, VenueSpace, Reservation, ContactMessage } from '../types';
+import { MenuItem, VenueSpace, Reservation, ContactMessage, Order, KitchenCabinetMember } from '../types';
 import {
   TrendingUp,
   Users,
@@ -27,11 +27,23 @@ import {
   Shield,
   Briefcase,
   AlertTriangle,
-  MessageSquare
+  MessageSquare,
+  ShoppingBag,
+  Truck,
+  ChefHat,
+  MapPin,
+  CreditCard,
+  ShieldAlert,
+  LogIn,
+  LogOut,
+  Key,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth } from '../lib/firebase';
+import { signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
 
-interface AdminScreenProps {
+interface CabinetScreenProps {
   reservations: Reservation[];
   setReservations: React.Dispatch<React.SetStateAction<Reservation[]>>;
   menuItems: MenuItem[];
@@ -40,11 +52,17 @@ interface AdminScreenProps {
   setVenueSpaces: React.Dispatch<React.SetStateAction<VenueSpace[]>>;
   contactMessages: ContactMessage[];
   setContactMessages: React.Dispatch<React.SetStateAction<ContactMessage[]>>;
+  orders: Order[];
+  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  currentUser: User | null;
+  cabinetMembers: KitchenCabinetMember[];
+  onAddCabinetMember: (member: KitchenCabinetMember) => Promise<void>;
+  onDeleteCabinetMember: (uid: string) => Promise<void>;
 }
 
-type AdminTab = 'dashboard' | 'reservations' | 'menu' | 'venue' | 'messages';
+type AdminTab = 'dashboard' | 'reservations' | 'menu' | 'venue' | 'messages' | 'orders' | 'registry';
 
-export default function AdminScreen({
+export default function CabinetScreen({
   reservations,
   setReservations,
   menuItems,
@@ -52,17 +70,117 @@ export default function AdminScreen({
   venueSpaces,
   setVenueSpaces,
   contactMessages,
-  setContactMessages
-}: AdminScreenProps) {
+  setContactMessages,
+  orders,
+  setOrders,
+  currentUser,
+  cabinetMembers,
+  onAddCabinetMember,
+  onDeleteCabinetMember
+}: CabinetScreenProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [reservationSearch, setReservationSearch] = useState('');
   const [reservationFilter, setReservationFilter] = useState<'all' | 'pending' | 'approved' | 'cancelled'>('all');
+  
+  // Staff registry manager state
+  const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffUid, setNewStaffUid] = useState('');
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState('Chef de Cuisine');
+  const [registryError, setRegistryError] = useState('');
+  const [registrySuccess, setRegistrySuccess] = useState('');
+
+  const isAuthorized = currentUser && (
+    currentUser.email === 'howsaim216@gmail.com' ||
+    cabinetMembers.some(m => m.uid === currentUser.uid || m.email === currentUser.email)
+  );
+
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      console.error('Failed to log in:', err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err: any) {
+      console.error('Failed to sign out:', err);
+    }
+  };
+
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-md mx-auto px-6 py-24 text-center space-y-8">
+        <div className="neo-convex p-8 rounded-3xl bg-[#131313] border border-white/5 space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#f2ca50]/10 flex items-center justify-center border border-[#f2ca50]/20 text-[#f2ca50]">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          
+          <div className="space-y-2">
+            <h1 className="font-display text-2xl text-white font-bold tracking-tight">
+              Protected Culinary Registry
+            </h1>
+            <p className="font-sans text-[#bab8b7]/60 text-xs tracking-widest uppercase">
+              Kitchen Cabinet Entry Only
+            </p>
+          </div>
+
+          <p className="font-sans text-[#bab8b7] text-sm leading-relaxed">
+            This registry is reserved exclusively for authorized members of the Zaviya restaurant staff (Maitre D', Chef de Cuisine, and Administration).
+          </p>
+
+          {!currentUser ? (
+            <div className="space-y-4 pt-2">
+              <button
+                onClick={handleGoogleLogin}
+                className="w-full py-4 px-6 bg-[#f2ca50] text-[#131313] rounded-2xl font-sans text-xs font-bold tracking-widest uppercase hover:bg-white hover:text-black transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer neo-convex border-0"
+              >
+                <LogIn className="w-4 h-4" />
+                Staff Authenticate
+              </button>
+              <p className="font-sans text-[10px] text-[#bab8b7]/40">
+                Log in with your pre-authorized staff Google account.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 pt-2 bg-red-500/5 border border-red-500/10 rounded-2xl p-4">
+              <p className="font-sans text-xs text-red-400 font-medium">
+                Access Denied: Account not pre-registered.
+              </p>
+              <div className="font-sans text-xs text-[#bab8b7] space-y-1 bg-[#131313] p-3 rounded-xl border border-white/5 text-left">
+                <div><span className="text-[#bab8b7]/40">Authenticated:</span> {currentUser.email}</div>
+                <div><span className="text-[#bab8b7]/40">UID:</span> <span className="font-mono text-[10px]">{currentUser.uid}</span></div>
+              </div>
+              <p className="font-sans text-[11px] text-[#bab8b7]/60">
+                To request access, please contact the Chef de Cuisine with your UID.
+              </p>
+              <button
+                onClick={handleLogout}
+                className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 text-[#bab8b7] hover:text-white rounded-xl font-sans text-xs font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer border-0"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Switch Account
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
   
   // Menu Manager State
   const [menuSearch, setMenuSearch] = useState('');
   const [menuFilter, setMenuFilter] = useState<string>('All');
   const [isAddingDish, setIsAddingDish] = useState(false);
   const [editingDishId, setEditingDishId] = useState<string | null>(null);
+
+  // Orders Filter/Search State
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'received' | 'preparing' | 'delivery' | 'delivered' | 'cancelled'>('all');
 
   // New Dish Form State
   const [dishForm, setDishForm] = useState({
@@ -374,6 +492,7 @@ export default function AdminScreen({
   }, {});
 
   const unreadMessagesCount = contactMessages.filter((m) => m.status === 'unread').length;
+  const activeOrdersCount = orders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-16 py-12 text-left space-y-10">
@@ -381,23 +500,46 @@ export default function AdminScreen({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-[#f2ca50]">
-            <Shield className="w-5 h-5" />
+            <ChefHat className="w-5 h-5" />
             <span className="font-sans font-bold text-xs tracking-[0.3em] uppercase">
-              Management Portal
+              Culinary Registry
             </span>
           </div>
           <h1 className="font-display text-4xl md:text-5xl text-white tracking-tight">
-            Admin Control Panel
+            Kitchen Cabinet
           </h1>
-          <p className="font-sans text-[#bab8b7] text-sm leading-relaxed max-w-xl">
-            Control table assignments, customize menu items in real-time, adjust seating capacities, and monitor reservation metrics.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 font-sans text-[#bab8b7] text-sm">
+            <p className="leading-relaxed">
+              Administer menu items, seating spaces, reservations, orders, customer inquiries, and staff privileges in real-time.
+            </p>
+            {currentUser && (
+              <span className="shrink-0 bg-[#f2ca50]/10 border border-[#f2ca50]/20 px-2 py-1 rounded text-[#f2ca50] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                {currentUser.email}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="neo-concave p-1.5 rounded-2xl bg-[#131313] border border-white/5 flex flex-wrap gap-2">
-          {(['dashboard', 'reservations', 'menu', 'venue', 'messages'] as AdminTab[]).map((tab) => {
+        {/* Staff Actions / Switch */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 border border-white/5 hover:bg-white/5 text-[#bab8b7] hover:text-white rounded-xl font-sans text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Switcher Row */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="neo-concave p-1.5 rounded-2xl bg-[#131313] border border-white/5 flex flex-wrap gap-2 w-full lg:w-auto">
+          {(['dashboard', 'reservations', 'menu', 'venue', 'messages', 'orders', 'registry'] as AdminTab[]).map((tab) => {
             const isMsg = tab === 'messages';
+            const isOrders = tab === 'orders';
+            const isRegistry = tab === 'registry';
             return (
               <button
                 key={tab}
@@ -408,10 +550,15 @@ export default function AdminScreen({
                     : 'text-[#bab8b7]/60 hover:text-[#bab8b7]'
                 }`}
               >
-                <span>{isMsg ? 'Inquiries' : tab}</span>
+                <span>{isMsg ? 'Inquiries' : isRegistry ? 'Cabinet Registry' : tab}</span>
                 {isMsg && unreadMessagesCount > 0 && (
                   <span className="bg-[#f2ca50] text-[#131313] text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 min-w-[18px] text-center">
                     {unreadMessagesCount}
+                  </span>
+                )}
+                {isOrders && activeOrdersCount > 0 && (
+                  <span className="bg-[#f2ca50] text-[#131313] text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 min-w-[18px] text-center">
+                    {activeOrdersCount}
                   </span>
                 )}
               </button>
@@ -431,7 +578,7 @@ export default function AdminScreen({
             className="space-y-8"
           >
             {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
               {/* Total Bookings */}
               <div className="neo-convex p-6 rounded-3xl bg-[#20201f] border border-white/5 space-y-4">
                 <div className="flex justify-between items-center">
@@ -499,7 +646,7 @@ export default function AdminScreen({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-3xl font-display text-white font-bold">{menuItems.length}</h3>
+                  <h3 className="text-3xl font-display text-white font-bold">{menuItems.filter(item => item.id !== 'placeholder-item').length}</h3>
                   <p className="text-[10px] text-[#bab8b7]/50 font-sans tracking-wide">
                     Active Catalog Dishes
                   </p>
@@ -507,7 +654,7 @@ export default function AdminScreen({
               </div>
 
               {/* Customer Inquiries Count */}
-              <div className="neo-convex p-6 rounded-3xl bg-[#20201f] border border-[#f2ca50]/15 space-y-4 hover:border-[#f2ca50]/30 transition-colors">
+              <div className="neo-convex p-6 rounded-3xl bg-[#20201f] border border-white/5 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-[#bab8b7]/60 text-xs font-bold tracking-wider uppercase">
                     Inquiries
@@ -517,9 +664,27 @@ export default function AdminScreen({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-3xl font-display text-[#f2ca50] font-bold">{contactMessages.length}</h3>
+                  <h3 className="text-3xl font-display text-white font-bold">{contactMessages.length}</h3>
                   <p className="text-[10px] text-[#bab8b7] font-sans tracking-wide">
                     <span className="text-amber-400 font-bold">{unreadMessagesCount} unread</span> inquiries
+                  </p>
+                </div>
+              </div>
+
+              {/* Online Orders Count */}
+              <div className="neo-convex p-6 rounded-3xl bg-[#20201f] border border-[#f2ca50]/15 space-y-4 hover:border-[#f2ca50]/30 transition-colors">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#bab8b7]/60 text-xs font-bold tracking-wider uppercase">
+                    Online Orders
+                  </span>
+                  <div className="p-2.5 rounded-xl neo-concave text-[#f2ca50] bg-[#131313]/50">
+                    <ShoppingBag className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-3xl font-display text-white font-bold">{orders.length}</h3>
+                  <p className="text-[10px] text-[#bab8b7] font-sans tracking-wide">
+                    <span className="text-amber-400 font-bold">{activeOrdersCount} in progress</span> deliveries
                   </p>
                 </div>
               </div>
@@ -1304,6 +1469,10 @@ export default function AdminScreen({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {menuItems
                 .filter((item) => {
+                  const hasRealItems = menuItems.some(i => i.id !== 'placeholder-item');
+                  if (hasRealItems && item.id === 'placeholder-item') {
+                    return false;
+                  }
                   const matchesSearch = item.title.toLowerCase().includes(menuSearch.toLowerCase());
                   const matchesFilter = menuFilter === 'All' || item.category === menuFilter;
                   return matchesSearch && matchesFilter;
@@ -1774,6 +1943,501 @@ export default function AdminScreen({
                   </div>
                 );
               })()}
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'orders' && (
+          <motion.div
+            key="orders"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6"
+          >
+            {/* Header info / Search and filter bar */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+              {/* Search */}
+              <div className="neo-concave rounded-xl px-4 py-2.5 flex items-center bg-[#131313] border border-white/5 text-xs font-sans w-full md:max-w-md gap-3">
+                <Search className="w-4 h-4 text-[#bab8b7]/40" />
+                <input
+                  type="text"
+                  placeholder="Search orders by ID, name, city, address..."
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-white w-full font-semibold placeholder:text-[#bab8b7]/30"
+                />
+                {orderSearch && (
+                  <button onClick={() => setOrderSearch('')} className="text-[#bab8b7]/40 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filters */}
+              <div className="flex flex-wrap gap-2">
+                {(['all', 'received', 'preparing', 'delivery', 'delivered', 'cancelled'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setOrderFilter(filter)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-sans font-bold tracking-wider uppercase border transition-all ${
+                      orderFilter === filter
+                        ? 'bg-[#f2ca50]/15 border-[#f2ca50]/35 text-[#f2ca50] shadow-sm'
+                        : 'bg-[#131313] border-white/5 text-[#bab8b7]/50 hover:text-[#bab8b7]'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Orders list */}
+            <div className="space-y-6">
+              {(() => {
+                const filteredOrders = orders.filter((ord) => {
+                  const matchesSearch =
+                    ord.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                    ord.customerName.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                    ord.customerEmail.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                    ord.deliveryAddress.toLowerCase().includes(orderSearch.toLowerCase());
+                  const matchesFilter = orderFilter === 'all' || ord.status === orderFilter;
+                  return matchesSearch && matchesFilter;
+                });
+
+                if (filteredOrders.length === 0) {
+                  return (
+                    <div className="neo-convex p-12 rounded-[2rem] bg-[#20201f] border border-white/5 text-center space-y-4 max-w-xl mx-auto">
+                      <div className="w-16 h-16 rounded-full bg-[#131313] border border-white/5 flex items-center justify-center text-[#bab8b7]/40 mx-auto">
+                        <ShoppingBag className="w-8 h-8" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-display text-xl text-white font-bold">No Orders Found</h3>
+                        <p className="font-sans text-xs text-[#bab8b7]/60 leading-relaxed">
+                          {orderSearch || orderFilter !== 'all'
+                            ? 'No online orders match your active search terms or filters.'
+                            : 'No customer orders have been placed yet.'}
+                        </p>
+                      </div>
+                      {(orderSearch || orderFilter !== 'all') && (
+                        <button
+                          onClick={() => {
+                            setOrderSearch('');
+                            setOrderFilter('all');
+                          }}
+                          className="neo-convex bg-[#f2ca50] text-[#131313] px-5 py-2.5 rounded-xl font-sans font-bold text-[10px] uppercase tracking-wider hover:bg-[#d4af37] transition-all"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 gap-6">
+                    {filteredOrders.map((ord) => {
+                      return (
+                        <div
+                          key={ord.id}
+                          className={`neo-convex rounded-[2rem] p-6 md:p-8 bg-[#20201f] border transition-all ${
+                            ord.status === 'received' ? 'border-[#f2ca50]/20 shadow-[0_0_15px_rgba(242,202,80,0.02)]' : 'border-white/5'
+                          }`}
+                        >
+                          {/* Top Metadata */}
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-4">
+                            <div className="space-y-1">
+                              <span className="font-sans text-[9px] text-[#bab8b7]/60 tracking-wider block font-bold uppercase">
+                                Customer
+                              </span>
+                              <div className="flex items-baseline gap-2 flex-wrap text-left">
+                                <h4 className="font-display text-lg text-white font-bold">{ord.customerName}</h4>
+                                <span className="font-sans text-xs text-[#bab8b7]">({ord.customerEmail})</span>
+                              </div>
+                              <p className="font-mono text-[10px] text-[#bab8b7]/60">Contact: {ord.customerPhone}</p>
+                            </div>
+
+                            <div className="flex items-center gap-2.5">
+                              {/* Date */}
+                              <span className="font-sans text-[10px] text-[#bab8b7]/50 font-bold bg-[#131313] px-3 py-1 rounded-md border border-white/5 uppercase tracking-wide">
+                                {ord.createdAt}
+                              </span>
+                              
+                              {/* Status badge */}
+                              <span
+                                className={`text-[9px] font-sans font-bold tracking-widest px-2.5 py-1 rounded-md uppercase border ${
+                                  ord.status === 'received'
+                                    ? 'bg-amber-500/15 border-amber-500/20 text-amber-400'
+                                    : ord.status === 'preparing'
+                                    ? 'bg-indigo-500/15 border-indigo-500/20 text-indigo-400'
+                                    : ord.status === 'delivery'
+                                    ? 'bg-blue-500/15 border-blue-500/20 text-blue-400'
+                                    : ord.status === 'delivered'
+                                    ? 'bg-green-500/15 border-green-500/20 text-green-400'
+                                    : 'bg-red-500/15 border-red-500/20 text-red-400'
+                                }`}
+                              >
+                                {ord.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Order Details Body */}
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            {/* Left side: Items lists */}
+                            <div className="lg:col-span-7 space-y-4 text-left">
+                              <div className="space-y-2">
+                                <span className="font-sans text-[9px] text-[#bab8b7]/60 tracking-wider block font-bold uppercase">
+                                  Ordered Culinary Selection
+                                </span>
+                                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-2">
+                                  {ord.items.map((it, idx) => (
+                                    <div key={idx} className="flex justify-between items-center bg-[#131313]/50 p-3 rounded-xl border border-white/5">
+                                      <div className="space-y-0.5">
+                                        <p className="text-white text-xs font-bold font-display">{it.menuItem.title}</p>
+                                        <p className="text-[10px] text-[#bab8b7]/50">{it.menuItem.category}</p>
+                                        {it.notes && (
+                                          <p className="text-[10px] text-[#f2ca50]/70 italic font-medium">Notes: {it.notes}</p>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-4 items-center shrink-0 font-sans">
+                                        <span className="text-[10px] text-[#bab8b7]/50 font-bold">Qty: {it.quantity}</span>
+                                        <span className="text-white font-mono font-bold text-xs">{it.menuItem.price}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right side: Address and financial sums */}
+                            <div className="lg:col-span-5 bg-[#131313]/30 p-4 rounded-2xl border border-white/5 flex flex-col justify-between space-y-4 text-xs font-sans text-left">
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <span className="text-[9px] text-[#bab8b7]/60 uppercase tracking-wider block font-bold">Delivery Location</span>
+                                  <p className="text-[#e5e2e1] font-semibold leading-relaxed">{ord.deliveryAddress}</p>
+                                </div>
+
+                                <div className="space-y-1.5 border-t border-white/5 pt-2.5 text-[#bab8b7]">
+                                  <div className="flex justify-between">
+                                    <span>Subtotal</span>
+                                    <span className="font-mono text-white">Rs. {ord.subtotal.toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>GST Tax (10%)</span>
+                                    <span className="font-mono text-white">Rs. {ord.tax.toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Delivery Fee</span>
+                                    <span className="font-mono text-white">Rs. {ord.deliveryFee.toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="border-t border-white/5 pt-3 flex justify-between items-baseline">
+                                <span className="font-bold text-[#f2ca50] uppercase text-[9px] tracking-wider font-sans">Paid Total ({ord.paymentMethod.toUpperCase()})</span>
+                                <span className="text-[#f2ca50] font-mono text-base font-bold">Rs. {ord.total.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Controls Footer */}
+                          <div className="flex flex-wrap justify-between items-center pt-4 border-t border-white/5 gap-4 mt-6">
+                            {/* Status Stepping Action Buttons */}
+                            <div className="flex flex-wrap gap-2">
+                              {ord.status === 'received' && (
+                                <button
+                                  onClick={() => {
+                                    setOrders((prev) =>
+                                      prev.map((o) => (o.id === ord.id ? { ...o, status: 'preparing' } : o))
+                                    );
+                                  }}
+                                  className="px-4 py-2 bg-[#f2ca50]/10 border border-[#f2ca50]/15 hover:border-[#f2ca50]/30 text-[#f2ca50] rounded-xl text-[9px] font-sans font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <ChefHat className="w-3.5 h-3.5" />
+                                  Start Preparing
+                                </button>
+                              )}
+
+                              {ord.status === 'preparing' && (
+                                <button
+                                  onClick={() => {
+                                    setOrders((prev) =>
+                                      prev.map((o) => (o.id === ord.id ? { ...o, status: 'delivery' } : o))
+                                    );
+                                  }}
+                                  className="px-4 py-2 bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 text-blue-400 rounded-xl text-[9px] font-sans font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Truck className="w-3.5 h-3.5" />
+                                  Dispatch for Delivery
+                                </button>
+                              )}
+
+                              {ord.status === 'delivery' && (
+                                <button
+                                  onClick={() => {
+                                    setOrders((prev) =>
+                                      prev.map((o) => (o.id === ord.id ? { ...o, status: 'delivered' } : o))
+                                    );
+                                  }}
+                                  className="px-4 py-2 bg-green-500/10 border border-green-500/10 hover:border-green-500/20 text-green-400 rounded-xl text-[9px] font-sans font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  Complete Delivery
+                                </button>
+                              )}
+
+                              {/* Direct Status dropdown override for quick adjustments */}
+                              <div className="flex items-center gap-1 font-sans">
+                                <span className="text-[8px] uppercase tracking-wider text-[#bab8b7]/40 font-bold mr-1">Status Override:</span>
+                                <select
+                                  value={ord.status}
+                                  onChange={(e) => {
+                                    const val = e.target.value as Order['status'];
+                                    setOrders((prev) =>
+                                      prev.map((o) => (o.id === ord.id ? { ...o, status: val } : o))
+                                    );
+                                  }}
+                                  className="bg-[#131313] text-[#f2ca50] border border-white/5 rounded-lg px-2 py-1 text-[9px] uppercase font-bold focus:outline-none"
+                                >
+                                  <option value="received">Received</option>
+                                  <option value="preparing">Preparing</option>
+                                  <option value="delivery">In Transit</option>
+                                  <option value="delivered">Delivered</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Right delete */}
+                            <button
+                              onClick={() => {
+                                if (confirm('Are you sure you want to permanently delete this order record?')) {
+                                  setOrders((prev) => prev.filter((o) => o.id !== ord.id));
+                                }
+                              }}
+                              className="px-3 py-2 bg-red-500/10 border border-red-500/10 hover:border-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-[9px] font-sans font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer"
+                              title="Delete Order"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete Record
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'registry' && (
+          <motion.div
+            key="registry"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="space-y-6"
+          >
+            {/* Header */}
+            <div className="neo-convex p-8 rounded-3xl bg-[#131313] border border-white/5 space-y-2">
+              <h2 className="font-display text-2xl text-white font-bold tracking-tight">
+                Cabinet Staff Registry
+              </h2>
+              <p className="font-sans text-[#bab8b7] text-sm leading-relaxed">
+                Add and manage staff credentials for the Kitchen Cabinet. Members listed here gain secure administrative clearance to customize menus, oversee orders, and moderate luxury table bookings.
+              </p>
+            </div>
+
+            {/* Quick staff addition card */}
+            <div className="neo-convex p-8 rounded-3xl bg-[#131313] border border-white/5 space-y-6">
+              <div className="flex items-center gap-2 text-[#f2ca50]">
+                <UserPlus className="w-5 h-5" />
+                <h3 className="font-sans font-bold text-sm uppercase tracking-wider">Add Staff Member</h3>
+              </div>
+
+              {registryError && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl font-sans">
+                  {registryError}
+                </div>
+              )}
+              {registrySuccess && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 text-green-400 text-xs rounded-xl font-sans">
+                  {registrySuccess}
+                </div>
+              )}
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setRegistryError('');
+                  setRegistrySuccess('');
+
+                  if (!newStaffUid.trim()) {
+                    setRegistryError('User UID is required.');
+                    return;
+                  }
+                  if (!newStaffEmail.trim()) {
+                    setRegistryError('Staff Google Email is required.');
+                    return;
+                  }
+                  if (!newStaffName.trim()) {
+                    setRegistryError('Staff Full Name is required.');
+                    return;
+                  }
+
+                  try {
+                    await onAddCabinetMember({
+                      uid: newStaffUid.trim(),
+                      email: newStaffEmail.trim().toLowerCase(),
+                      name: newStaffName.trim(),
+                      role: newStaffRole,
+                      addedAt: new Date().toISOString().split('T')[0]
+                    });
+                    setRegistrySuccess(`Successfully inducted ${newStaffName} into the Kitchen Cabinet!`);
+                    setNewStaffUid('');
+                    setNewStaffEmail('');
+                    setNewStaffName('');
+                  } catch (err: any) {
+                    setRegistryError(`Failed to add member: ${err.message || err}`);
+                  }
+                }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              >
+                <div className="space-y-2 text-left">
+                  <label className="font-sans text-xs font-bold text-[#bab8b7]/60 uppercase tracking-wider">
+                    Staff Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Sardar Usman"
+                    value={newStaffName}
+                    onChange={(e) => setNewStaffName(e.target.value)}
+                    className="w-full bg-[#1c1c1c] border border-white/5 rounded-xl px-4 py-3 font-sans text-xs text-white focus:outline-none focus:border-[#f2ca50]/50 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label className="font-sans text-xs font-bold text-[#bab8b7]/60 uppercase tracking-wider">
+                    Google Account Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. usman@gmail.com"
+                    value={newStaffEmail}
+                    onChange={(e) => setNewStaffEmail(e.target.value)}
+                    className="w-full bg-[#1c1c1c] border border-white/5 rounded-xl px-4 py-3 font-sans text-xs text-white focus:outline-none focus:border-[#f2ca50]/50 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label className="font-sans text-xs font-bold text-[#bab8b7]/60 uppercase tracking-wider flex items-center gap-1.5">
+                    User UID
+                    <span className="text-[10px] lowercase text-[#bab8b7]/40 normal-case">(Obtained from user's Profile screen)</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. o7XyZ29vS..."
+                    value={newStaffUid}
+                    onChange={(e) => setNewStaffUid(e.target.value)}
+                    className="w-full bg-[#1c1c1c] border border-white/5 rounded-xl px-4 py-3 font-sans text-xs text-white focus:outline-none focus:border-[#f2ca50]/50 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label className="font-sans text-xs font-bold text-[#bab8b7]/60 uppercase tracking-wider">
+                    Culinary Role
+                  </label>
+                  <select
+                    value={newStaffRole}
+                    onChange={(e) => setNewStaffRole(e.target.value)}
+                    className="w-full bg-[#1c1c1c] border border-white/5 rounded-xl px-4 py-3 font-sans text-xs text-white focus:outline-none focus:border-[#f2ca50]/50 transition-colors cursor-pointer"
+                  >
+                    <option value="Chef de Cuisine">Chef de Cuisine (Director)</option>
+                    <option value="Maitre D'">Maitre D' (General Manager)</option>
+                    <option value="Sous Chef">Sous Chef (Editor)</option>
+                    <option value="Sommelier">Sommelier (Staff)</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2 pt-2">
+                  <button
+                    type="submit"
+                    className="w-full md:w-auto px-8 py-3.5 bg-[#f2ca50] text-[#131313] font-sans text-xs font-bold tracking-widest uppercase rounded-xl hover:bg-white hover:text-black transition-all cursor-pointer neo-convex flex items-center justify-center gap-2 border-0"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Induct Staff Member
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* List of members */}
+            <div className="neo-convex p-8 rounded-3xl bg-[#131313] border border-white/5 space-y-6 text-left">
+              <h3 className="font-display text-lg text-white font-bold tracking-tight">
+                Current Kitchen Cabinet ({cabinetMembers.length + 1})
+              </h3>
+
+              <div className="divide-y divide-white/5">
+                {/* Always render root owner */}
+                <div className="py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-sans font-bold text-sm text-white font-medium">Zaviya Restaurant Owner</span>
+                      <span className="px-2 py-0.5 rounded bg-[#f2ca50]/10 border border-[#f2ca50]/20 text-[#f2ca50] text-[8px] font-sans uppercase font-bold tracking-wider">
+                        Root Creator
+                      </span>
+                    </div>
+                    <div className="font-sans text-xs text-[#bab8b7]/60">howsaim216@gmail.com</div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-sans text-xs font-bold text-[#bab8b7]/40 uppercase tracking-wider">SYSTEM ROOT</span>
+                  </div>
+                </div>
+
+                {cabinetMembers.map((member) => (
+                  <div key={member.uid} className="py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-sans font-bold text-sm text-white font-medium">{member.name}</span>
+                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/60 text-[8px] font-sans uppercase font-bold tracking-wider">
+                          {member.role}
+                        </span>
+                      </div>
+                      <div className="font-sans text-xs text-[#bab8b7]/60 flex items-center gap-2">
+                        <span>{member.email}</span>
+                        <span className="text-[#bab8b7]/20">•</span>
+                        <span className="font-mono text-[10px] text-[#bab8b7]/30">{member.uid}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-sans text-[10px] text-[#bab8b7]/40 uppercase tracking-wider">
+                        Inducted {member.addedAt}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          if (confirm(`Are you sure you want to remove ${member.name} from the Kitchen Cabinet?`)) {
+                            try {
+                              await onDeleteCabinetMember(member.uid);
+                            } catch (err: any) {
+                              alert(`Failed to delete member: ${err.message || err}`);
+                            }
+                          }
+                        }}
+                        className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg border border-red-500/10 hover:border-red-500/20 transition-all cursor-pointer"
+                        title="Revoke Credentials"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}

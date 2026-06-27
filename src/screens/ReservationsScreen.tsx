@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { ReservationState, Reservation } from '../types';
-import { Calendar, Users, Mail, User, Clock, CheckCircle2, Heart, Award, Sparkles, Sliders, ArrowLeft, Send } from 'lucide-react';
+import { Calendar, Users, Mail, User, Clock, CheckCircle2, Heart, Award, Sparkles, Sliders, ArrowLeft, Send, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ReservationsScreenProps {
@@ -15,6 +15,7 @@ interface ReservationsScreenProps {
   ambientLight: number;
   soundscape: string;
   setReservations: React.Dispatch<React.SetStateAction<Reservation[]>>;
+  onShareReservation?: (reservation: Reservation) => void;
 }
 
 export default function ReservationsScreen({
@@ -23,11 +24,13 @@ export default function ReservationsScreen({
   interestedDishes,
   ambientLight,
   soundscape,
-  setReservations
+  setReservations,
+  onShareReservation
 }: ReservationsScreenProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdRes, setCreatedRes] = useState<Reservation | null>(null);
 
   const guestOptions = ['2', '4', '6', '8', '12+'];
   const timeOptions = ['18:30', '19:00', '20:30', '21:00'];
@@ -77,6 +80,7 @@ export default function ReservationsScreen({
 
     setTimeout(() => {
       setReservations((prev) => [newRes, ...prev]);
+      setCreatedRes(newRes);
       setIsLoading(false);
       setIsSubmitted(true);
     }, 1500);
@@ -453,24 +457,36 @@ export default function ReservationsScreen({
               )}
             </div>
 
-            <button
-              onClick={() => {
-                setIsSubmitted(false);
-                setReservation({
-                  guests: '2',
-                  date: '',
-                  time: '19:00',
-                  experience: 'standard',
-                  name: '',
-                  email: '',
-                  specialRequests: ''
-                });
-              }}
-              className="neo-convex px-8 py-4 rounded-xl text-xs text-[#d0c5af] hover:text-[#f2ca50] font-sans font-semibold tracking-widest uppercase flex items-center gap-2 mx-auto"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              MAKE ANOTHER RESERVATION
-            </button>
+            {/* Share Invitation Action */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-xl mx-auto pt-2">
+              <button
+                onClick={() => createdRes && onShareReservation && onShareReservation(createdRes)}
+                className="neo-convex w-full sm:w-auto px-8 py-4 rounded-xl bg-[#f2ca50] text-[#131313] hover:bg-[#e0bb42] hover:scale-105 active:scale-95 transition-all font-sans font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Share2 className="w-4 h-4" />
+                SHARE INVITATION PASS
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsSubmitted(false);
+                  setCreatedRes(null);
+                  setReservation({
+                    guests: '2',
+                    date: '',
+                    time: '19:00',
+                    experience: 'standard',
+                    name: '',
+                    email: '',
+                    specialRequests: ''
+                  });
+                }}
+                className="neo-convex w-full sm:w-auto px-8 py-4 rounded-xl text-xs text-[#d0c5af] hover:text-[#f2ca50] font-sans font-semibold tracking-widest uppercase flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                MAKE ANOTHER RESERVATION
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -71,7 +71,7 @@ export default function Footer({ onPageChange }: FooterProps) {
                 Contact Us
               </button>
               <button
-                onClick={() => onPageChange('admin')}
+                onClick={() => onPageChange('cabinet')}
                 className="text-left text-[#bab8b7] hover:text-[#f2ca50] text-sm transition-colors duration-200"
               >
                 Staff Portal

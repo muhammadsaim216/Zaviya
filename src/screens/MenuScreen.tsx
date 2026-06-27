@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { PageId, MenuItem } from '../types';
-import { Search, Star, Sparkles, Check, Utensils, Award } from 'lucide-react';
+import { PageId, MenuItem, CartItem } from '../types';
+import { Search, Star, Sparkles, Check, Utensils, Award, ShoppingBag, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface MenuScreenProps {
@@ -13,13 +13,19 @@ interface MenuScreenProps {
   interestedDishes: string[];
   onToggleInterest: (dishTitle: string) => void;
   menuItems: MenuItem[];
+  onAddToCart?: (menuItem: MenuItem) => void;
+  cart?: CartItem[];
+  onShareMenuItem?: (menuItem: MenuItem) => void;
 }
 
 export default function MenuScreen({
   onPageChange,
   interestedDishes,
   onToggleInterest,
-  menuItems
+  menuItems,
+  onAddToCart,
+  cart = [],
+  onShareMenuItem
 }: MenuScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -27,6 +33,10 @@ export default function MenuScreen({
   const categories = ['All', 'Gastronomy', 'Shinwari', 'BBQ', 'International', 'Patisserie'];
 
   const filteredItems = menuItems.filter((item) => {
+    const hasRealItems = menuItems.some(i => i.id !== 'placeholder-item');
+    if (hasRealItems && item.id === 'placeholder-item') {
+      return false;
+    }
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
     const matchesSearch =
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -155,32 +165,66 @@ export default function MenuScreen({
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                  <div className="flex justify-between items-center pt-3 border-t border-white/5 gap-2">
                     <span className="font-sans text-[10px] text-[#f2ca50]/70 tracking-widest uppercase font-semibold">
                       {item.category}
                     </span>
 
-                    {/* Interested Selection button */}
-                    <button
-                      onClick={() => onToggleInterest(item.title)}
-                      className={`neo-convex rounded-xl px-4 py-2.5 flex items-center gap-2 text-[10px] tracking-widest uppercase font-sans font-bold transition-all duration-300 ${
-                        isInterested
-                          ? 'neo-pressed active-pill text-[#f2ca50]'
-                          : 'text-[#d0c5af] hover:text-[#f2ca50]'
-                      }`}
-                    >
-                      {isInterested ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-[#f2ca50]" />
-                          Interested
-                        </>
-                      ) : (
-                        <>
-                          <Star className="w-3.5 h-3.5" />
-                          Interested
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* Share Button */}
+                      <button
+                        onClick={() => onShareMenuItem && onShareMenuItem(item)}
+                        className="neo-convex rounded-xl p-2 flex items-center justify-center text-[#d0c5af] hover:text-[#f2ca50] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+                        title="Share dynamic luxury preview card"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Interested Selection button */}
+                      <button
+                        onClick={() => onToggleInterest(item.title)}
+                        className={`neo-convex rounded-xl px-3 py-2 flex items-center gap-1.5 text-[9px] tracking-widest uppercase font-sans font-bold transition-all duration-300 cursor-pointer ${
+                          isInterested
+                            ? 'neo-pressed active-pill text-[#f2ca50]'
+                            : 'text-[#d0c5af] hover:text-[#f2ca50]'
+                        }`}
+                        title="Show interest for booking"
+                      >
+                        {isInterested ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-[#f2ca50]" />
+                            Interested
+                          </>
+                        ) : (
+                          <>
+                            <Star className="w-3.5 h-3.5" />
+                            Interested
+                          </>
+                        )}
+                      </button>
+
+                      {/* Add to Online Order button */}
+                      {(() => {
+                        const cartItem = cart.find((it) => it.menuItem.id === item.id);
+                        const isInCart = !!cartItem;
+                        const cartQuantity = cartItem ? cartItem.quantity : 0;
+
+                        return (
+                          <button
+                            onClick={() => onAddToCart && onAddToCart(item)}
+                            className={`neo-convex rounded-xl px-3 py-2 flex items-center gap-1.5 text-[9px] tracking-widest uppercase font-sans font-bold transition-all duration-300 cursor-pointer ${
+                              isInCart
+                                ? 'bg-[#f2ca50]/15 border border-[#f2ca50]/30 text-[#f2ca50]'
+                                : 'text-[#d0c5af] hover:text-[#f2ca50]'
+                            }`}
+                            title="Add to online order bag"
+                          >
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <span>{isInCart ? `In Bag (${cartQuantity})` : 'Order'}</span>
+                          </button>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               </motion.div>

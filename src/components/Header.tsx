@@ -5,15 +5,17 @@
 
 import React, { useState } from 'react';
 import { PageId } from '../types';
-import { Menu, X, Shield } from 'lucide-react';
+import { Menu, X, Shield, ShoppingBag, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HeaderProps {
   activePage: PageId;
   onPageChange: (page: PageId) => void;
+  cartCount?: number;
+  onCartOpen?: () => void;
 }
 
-export default function Header({ activePage, onPageChange }: HeaderProps) {
+export default function Header({ activePage, onPageChange, cartCount = 0, onCartOpen }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -88,17 +90,40 @@ export default function Header({ activePage, onPageChange }: HeaderProps) {
         </button>
         <button
           className={`font-sans font-semibold tracking-widest text-xs uppercase transition-colors duration-300 flex items-center gap-1.5 ${
-            activePage === 'admin' ? 'text-[#f2ca50] border-b border-[#f2ca50]/40 pb-1' : 'text-[#d0c5af] hover:text-[#f2ca50]'
+            activePage === 'cabinet' ? 'text-[#f2ca50] border-b border-[#f2ca50]/40 pb-1' : 'text-[#d0c5af] hover:text-[#f2ca50]'
           }`}
-          onClick={() => onPageChange('admin')}
+          onClick={() => onPageChange('cabinet')}
         >
           <Shield className="w-3 h-3 text-[#f2ca50]" />
-          Admin
+          Kitchen Cabinet
+        </button>
+        <button
+          className={`font-sans font-semibold tracking-widest text-xs uppercase transition-colors duration-300 flex items-center gap-1.5 ${
+            activePage === 'profile' ? 'text-[#f2ca50] border-b border-[#f2ca50]/40 pb-1' : 'text-[#d0c5af] hover:text-[#f2ca50]'
+          }`}
+          onClick={() => onPageChange('profile')}
+        >
+          <User className="w-3 h-3 text-[#f2ca50]" />
+          Profile
         </button>
       </nav>
 
       {/* Header Actions */}
       <div className="flex items-center gap-4">
+        {/* Shopping bag indicator trigger */}
+        <button
+          onClick={onCartOpen}
+          className="neo-convex p-2.5 rounded-full text-[#f2ca50] hover:text-white transition-all duration-200 relative cursor-pointer"
+          title="Open culinary bag"
+        >
+          <ShoppingBag className="w-4 h-4" />
+          {cartCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-[#f2ca50] text-[#131313] text-[8px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+              {cartCount}
+            </span>
+          )}
+        </button>
+
         {/* Tactile booking action */}
         <button
           className={`neo-convex neo-glint px-6 md:px-8 py-2.5 md:py-3 rounded-full text-[#f2ca50] font-sans font-semibold text-[10px] md:text-xs tracking-widest uppercase hover:scale-105 active:shadow-[inset_-2px_-2px_5px_#1f1f1f,inset_2px_2px_5px_#0a0a0a] transition-all duration-200 ${
@@ -168,12 +193,21 @@ export default function Header({ activePage, onPageChange }: HeaderProps) {
               </button>
               <button
                 className={`font-sans font-bold tracking-[0.2em] text-sm uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  activePage === 'admin' ? 'neo-pressed text-[#f2ca50] active-pill' : 'text-[#d0c5af] hover:text-[#f2ca50]'
+                  activePage === 'profile' ? 'neo-pressed text-[#f2ca50] active-pill' : 'text-[#d0c5af] hover:text-[#f2ca50]'
                 }`}
-                onClick={() => handleMobileNav('admin')}
+                onClick={() => handleMobileNav('profile')}
+              >
+                <User className="w-4 h-4 text-[#f2ca50]" />
+                Customer Profile
+              </button>
+              <button
+                className={`font-sans font-bold tracking-[0.2em] text-sm uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
+                  activePage === 'cabinet' ? 'neo-pressed text-[#f2ca50] active-pill' : 'text-[#d0c5af] hover:text-[#f2ca50]'
+                }`}
+                onClick={() => handleMobileNav('cabinet')}
               >
                 <Shield className="w-4 h-4 text-[#f2ca50]" />
-                Admin Panel
+                Kitchen Cabinet
               </button>
             </div>
           </motion.div>

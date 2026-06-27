@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Menu category with displaying order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "displayOrder": { "type": "number" }
+      },
+      "required": ["id", "name", "displayOrder"]
+    },
+    "MenuItemRelational": {
+      "title": "MenuItemRelational",
+      "description": "Restaurant menu item linked to a Category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "isAvailable": { "type": "boolean" },
+        "image": { "type": "string" },
+        "signature": { "type": "boolean" }
+      },
+      "required": ["id", "categoryId", "name", "price", "isAvailable"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User profile with saved delivery addresses",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "savedAddresses": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "phone", "savedAddresses", "createdAt"]
+    },
+    "OrderRelational": {
+      "title": "OrderRelational",
+      "description": "Customer order containing selected menu items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "items", "total", "status", "deliveryAddress", "paymentMethod", "createdAt"]
+    },
+    "ReservationRelational": {
+      "title": "ReservationRelational",
+      "description": "Table reservation linked to user profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "guestName": { "type": "string" },
+        "guestCount": { "type": "number" },
+        "dateTime": { "type": "string" },
+        "specialRequests": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "guestName", "guestCount", "dateTime", "status", "createdAt"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Customer inquiry message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "message", "status", "createdAt"]
+    },
+    "KitchenCabinetMember": {
+      "title": "KitchenCabinetMember",
+      "description": "Members of the Kitchen Cabinet with administration privileges",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "name": { "type": "string" },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role", "name", "addedAt"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Menu categories list"
+    },
+    "/menu_items/{id}": {
+      "schema": "MenuItemRelational",
+      "description": "Menu items list linked to categories"
+    },
+    "/profiles/{uid}": {
+      "schema": "Profile",
+      "description": "User profiles and addresses"
+    },
+    "/orders/{orderId}": {
+      "schema": "OrderRelational",
+      "description": "Customer order documents with transactional security"
+    },
+    "/reserve/{reservationId}": {
+      "schema": "ReservationRelational",
+      "description": "Luxury seating reservations"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Customer message inquiries"
+    },
+    "/kitchen_cabinet/{uid}": {
+      "schema": "KitchenCabinetMember",
+      "description": "Members of the restaurant's administrative staff (admins)"
+    }
+  }
+}

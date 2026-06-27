@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is a member of the restaurant's Kitchen Cabinet
+    function isCabinetMember() {
+      return request.auth != null && (
+        request.auth.token.email == "howsaim216@gmail.com" ||
+        exists(/databases/$(database)/documents/kitchen_cabinet/$(request.auth.uid))
+      );
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 1. Categories (Publicly readable, writable by Kitchen Cabinet)
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isCabinetMember();
+    }
+
+    // 2. Menu Items (Publicly readable, writable by Kitchen Cabinet)
+    match /menu_items/{id} {
+      allow read: if true;
+      allow write: if isCabinetMember();
+    }
+
+    // 3. Venue Spaces (Publicly readable, writable by Kitchen Cabinet)
+    match /venue_spaces/{id} {
+      allow read: if true;
+      allow write: if isCabinetMember();
+    }
+
+    // 4. User Profiles (Only the owner can read/write their own profile)
+    match /profiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // 5. Orders (Authenticated users can create, read their own; Kitchen Cabinet can manage)
+    match /orders/{orderId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (
+        resource.data.customerEmail == request.auth.token.email || isCabinetMember()
+      );
+      allow update, delete: if isCabinetMember();
+    }
+
+    // 6. Reservations (Authenticated users can create, read their own; Kitchen Cabinet can manage)
+    match /reserve/{reservationId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (
+        resource.data.email == request.auth.token.email || isCabinetMember()
+      );
+      allow update, delete: if isCabinetMember();
+    }
+
+    // 7. Inquiries (Anyone can create; only Kitchen Cabinet can read/update/delete)
+    match /inquiries/{inquiryId} {
+      allow create: if true;
+      allow read, update, delete: if isCabinetMember();
+    }
+
+    // 8. Kitchen Cabinet (Members can read; only existing Cabinet Members can add/remove)
+    match /kitchen_cabinet/{uid} {
+      allow read: if request.auth != null;
+      allow write: if isCabinetMember();
+    }
+  }
+}

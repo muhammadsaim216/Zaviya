@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type PageId = 'home' | 'menu' | 'venue' | 'reservations' | 'admin' | 'contact';
+export type PageId = 'home' | 'menu' | 'venue' | 'reservations' | 'cabinet' | 'contact' | 'profile';
 
 export interface MenuItem {
   id: string;
@@ -59,4 +59,44 @@ export interface ContactMessage {
   message: string;
   status: 'unread' | 'read' | 'replied';
   createdAt: string;
+}
+
+export interface CartItem {
+  menuItem: MenuItem;
+  quantity: number;
+  notes?: string;
+}
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  apartmentSuite?: string;
+  city: string;
+  postalCode?: string;
+}
+
+export interface Order {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  deliveryFee: number;
+  total: number;
+  paymentMethod: 'cod' | 'card';
+  status: 'received' | 'preparing' | 'delivery' | 'delivered' | 'cancelled';
+  createdAt: string;
+}
+
+export interface KitchenCabinetMember {
+  uid: string;
+  email: string;
+  role: string;
+  name: string;
+  addedAt: string;
 }
